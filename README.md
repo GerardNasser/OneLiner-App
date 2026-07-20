@@ -23,7 +23,7 @@ pip3 install customtkinter pyinstaller
 pyinstaller One-Liner.spec --clean
 ```
 
-The bundled app appears in `dist/One-Liner.app`. Builds are architecture-specific (Apple Silicon vs Intel) — build on the matching machine, or pass `--target-arch universal2` if your Python install supports it.
+The bundled app appears in `dist/One-Liner.app`. The app icon lives at `assets/One-Liner.icns`; regenerate it with `python3 assets/make_icon.py` (needs Pillow). Builds are architecture-specific (Apple Silicon vs Intel) — build on the matching machine, or pass `--target-arch universal2` if your Python install supports it.
 
 See `One-Liner App — Build & Deploy Guide.md` for the full build and deploy walkthrough, including Windows.
 

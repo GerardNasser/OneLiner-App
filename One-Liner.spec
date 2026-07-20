@@ -49,6 +49,10 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='One-Liner.app',
-    icon=None,
-    bundle_identifier=None,
+    icon='assets/One-Liner.icns',
+    bundle_identifier='com.gerardnasser.one-liner',
+    info_plist={
+        'CFBundleShortVersionString': '1.1.0',
+        'NSHighResolutionCapable': True,
+    },
 )

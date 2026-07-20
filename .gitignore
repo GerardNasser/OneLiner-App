@@ -13,6 +13,12 @@ env/
 build/
 dist/
 
+# Release archives (belong on GitHub Releases, not in git)
+*.zip
+
+# Icon build intermediates (regenerate with assets/make_icon.py)
+assets/One-Liner.iconset/
+
 # Editor and OS
 .DS_Store
 .vscode/
