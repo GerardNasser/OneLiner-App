@@ -1,39 +1,9 @@
 import customtkinter as ctk
-import re
-import sys
-import os
+
+from flatten import flatten_text
 
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
-
-
-def flatten_text(raw: str) -> str:
-    if not raw:
-        return ""
-
-    # Remove null bytes and invisible/control characters
-    invisible = (
-        "\x00", "\u200B", "\u200C", "\u200D", "\uFEFF",
-        "\u200E", "\u200F", "\u202A", "\u202B", "\u202C",
-        "\u202D", "\u202E", "\u2066", "\u2067", "\u2068",
-        "\u2069", "\u00AD",
-    )
-    for ch in invisible:
-        raw = raw.replace(ch, "")
-
-    # Normalise all line/paragraph break variants to a space
-    raw = raw.replace("\r\n", " ")
-    raw = raw.replace("\r",   " ")
-    raw = raw.replace("\n",   " ")
-    raw = raw.replace("\v",   " ")
-    raw = raw.replace("\f",   " ")
-    raw = raw.replace("\u2028", " ")
-    raw = raw.replace("\u2029", " ")
-
-    # Collapse all whitespace (including fancy Unicode spaces) to single space
-    raw = re.sub(r"[ \t\u00A0\u2000-\u200A\u202F\u205F\u3000]+", " ", raw)
-
-    return raw.strip()
 
 
 class OneLinerApp(ctk.CTk):
@@ -96,9 +66,20 @@ class OneLinerApp(ctk.CTk):
 
         ctk.CTkButton(
             btn_frame,
-            text="⟶  Flatten to One Line",
+            text="⌘⇧V  Paste & Flatten",
             font=ctk.CTkFont(size=14, weight="bold"),
-            width=210,
+            width=200,
+            height=42,
+            command=self._paste_and_flatten,
+        ).pack(side="left", padx=(0, 12))
+
+        ctk.CTkButton(
+            btn_frame,
+            text="⟶  Flatten",
+            font=ctk.CTkFont(size=13),
+            fg_color="gray30",
+            hover_color="gray40",
+            width=120,
             height=42,
             command=self._do_flatten,
         ).pack(side="left", padx=(0, 12))
@@ -109,9 +90,33 @@ class OneLinerApp(ctk.CTk):
             font=ctk.CTkFont(size=13),
             fg_color="gray30",
             hover_color="gray40",
-            width=120,
+            width=100,
             height=42,
             command=self._clear_all,
+        ).pack(side="left")
+
+        # ── Options ──
+        options_frame = ctk.CTkFrame(self, fg_color="transparent")
+        options_frame.grid(row=4, column=0, padx=30, pady=(0, 10))
+
+        self.join_hyphens_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            options_frame,
+            text="Join hyphenated line breaks (exam-ple → example)",
+            variable=self.join_hyphens_var,
+            font=ctk.CTkFont(size=12),
+            checkbox_width=18,
+            checkbox_height=18,
+        ).pack(side="left", padx=(0, 18))
+
+        self.keep_paragraphs_var = ctk.BooleanVar(value=False)
+        ctk.CTkCheckBox(
+            options_frame,
+            text="Preserve paragraph breaks",
+            variable=self.keep_paragraphs_var,
+            font=ctk.CTkFont(size=12),
+            checkbox_width=18,
+            checkbox_height=18,
         ).pack(side="left")
 
         # ── Output label ──
@@ -123,7 +128,7 @@ class OneLinerApp(ctk.CTk):
 
         ctk.CTkLabel(
             output_label_frame,
-            text="OUTPUT  —  one line",
+            text="OUTPUT",
             font=ctk.CTkFont(size=11),
             text_color="gray60",
         ).grid(row=0, column=0, sticky="w")
@@ -163,14 +168,18 @@ class OneLinerApp(ctk.CTk):
         # ── Footer tip ──
         ctk.CTkLabel(
             self,
-            text="Tip: ⌘+Return to flatten",
+            text="⌘⇧V pastes, flattens, and copies in one step  ·  ⌘↩ flattens the input box",
             font=ctk.CTkFont(size=11),
             text_color="gray50",
         ).grid(row=7, column=0, pady=(0, 14))
 
-        # Keyboard shortcut
+        # Keyboard shortcuts
         self.bind("<Command-Return>", lambda e: self._do_flatten())
         self.bind("<Control-Return>", lambda e: self._do_flatten())
+        self.bind("<Command-Shift-v>", lambda e: self._paste_and_flatten())
+        self.bind("<Command-Shift-V>", lambda e: self._paste_and_flatten())
+        self.bind("<Control-Shift-v>", lambda e: self._paste_and_flatten())
+        self.bind("<Control-Shift-V>", lambda e: self._paste_and_flatten())
 
     # ── Placeholder helpers ──
     def _clear_placeholder(self, event=None):
@@ -187,13 +196,41 @@ class OneLinerApp(ctk.CTk):
             self._placeholder_active = True
 
     # ── Actions ──
+    def _paste_and_flatten(self):
+        try:
+            clip = self.clipboard_get()
+        except Exception:
+            clip = ""
+        if not clip.strip():
+            self._flash_status("⚠  Clipboard is empty!", "orange")
+            return
+
+        self._clear_placeholder()
+        self.input_box.delete("0.0", "end")
+        self.input_box.insert("0.0", clip)
+        self._placeholder_active = False
+
+        self._do_flatten()
+
+        result = self.output_box.get("0.0", "end").strip()
+        if result and not result.startswith("(empty"):
+            self.clipboard_clear()
+            self.clipboard_append(result)
+            self._flash_status(
+                f"✓  Flattened & copied — {len(result):,} chars", "#4ECFA8"
+            )
+
     def _do_flatten(self):
         if self._placeholder_active:
             self._flash_status("⚠  Paste some text first!", "orange")
             return
 
         raw = self.input_box.get("0.0", "end")
-        result = flatten_text(raw)
+        result = flatten_text(
+            raw,
+            join_hyphens=self.join_hyphens_var.get(),
+            keep_paragraphs=self.keep_paragraphs_var.get(),
+        )
 
         self.output_box.configure(state="normal")
         self.output_box.delete("0.0", "end")

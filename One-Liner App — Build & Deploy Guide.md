@@ -28,12 +28,21 @@ Install the following on the **build machine** (the Mac where you compile):
     pyinstaller One-Liner.spec --clean
     ```
     
-3. When the build completes, the app bundle is located at:
+3. Apply an ad-hoc code signature (prevents the "app is damaged" error on newer macOS; the normal Gatekeeper right-click-to-open warning remains):
+    
+    ```
+    codesign --force --deep -s - dist/One-Liner.app
+    ```
+    
+4. When the build completes, the app bundle is located at:
     
     ```
     dist/One-Liner.app
     ```
     
+
+> **CI alternative:** pushing a `v*` git tag runs `.github/workflows/build.yml`, which tests, builds, signs, zips, and attaches the app to the GitHub release — no local build needed.
+
 
 #### Deploying to Other Macs
 
